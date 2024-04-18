@@ -39,6 +39,26 @@ def lineToTensor(all_letters, line):
         tensor[idx] = letterToIndex(all_letters, letter)
     return tensor
     
+class MLP(nn.Module):
+    def __init__(self, in_features, hidden_features=None, out_features=None, act_layer=nn.GELU, drop=0) -> None:
+        super().__init__()
+        hidden_features = hidden_features or in_features
+        out_features = out_features or in_features
+        self.fc1 = nn.Linear(in_features, hidden_features)
+        self.act = act_layer()
+        self.fc2 = nn.Linear(hidden_features, out_features)
+        self.drop = nn.Dropout(drop)
+
+    def forward(self, x):
+        x = self.fc1(x)
+        x = self.act(x)
+        # x = self.drop(x)
+        # commit this for the orignal BERT implement 
+        x = self.fc2(x)
+        x = self.drop(x)
+        return x
+
+
 class Reviews_Dataset(torch.utils.data.Dataset):
     def __init__(self, data, all_letters):
         self.data = data
@@ -79,7 +99,8 @@ class RNN(nn.Module):
         self.hidden_size = hidden_size
 
         self.embedding = nn.Embedding(vocab_size, embedding_size)
-        self.i2h = nn.Linear(embedding_size + hidden_size, hidden_size)
+        self.i2h = MLP(embedding_size + hidden_size, hidden_size, hidden_size, act_layer=nn.ReLU, drop=0)
+        # self.i2h = nn.Linear(embedding_size + hidden_size, hidden_size)
         self.h2o = nn.Linear(hidden_size, 1)
         self.sigmoid = nn.Sigmoid()
 

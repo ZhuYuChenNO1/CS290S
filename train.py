@@ -3,15 +3,17 @@ import tqdm
 import torch
 import torch.nn as nn
 import torch.utils.data as Data
-
+from fvcore.nn import sigmoid_focal_loss_jit
 from datetime import datetime
 from torch.utils.tensorboard import SummaryWriter
-
-from model import get_data, set_tokenizer_dict, Reviews_Dataset, RNN, YourModel
+from torch.optim.lr_scheduler import StepLR
+from model import get_data, set_tokenizer_dict, Reviews_Dataset, RNN
+from my_model import MYTransformer
 from utils import set_seed
+import math
+import argparse
 
-
-def train(model, optimizer, loss_fn, dataloader, writer, current_epoch_index, device):
+def train(model, optimizer, loss_fn, n_regWeight, dataloader, writer, current_epoch_index, device):
     """The training process of training the model.
 
     Args:
@@ -48,6 +50,9 @@ def train(model, optimizer, loss_fn, dataloader, writer, current_epoch_index, de
             optimizer.zero_grad()
             output = model(line_tensor)
             loss = loss_fn(output, category_tensor)
+            if category_tensor == 0:
+                loss *=n_regWeight
+            # loss = sigmoid_focal_loss_jit(output, category_tensor, alpha=0.25, reduction="sum")
             epoch_losses.append(loss.item())
             loss.backward()
             optimizer.step()
@@ -55,8 +60,9 @@ def train(model, optimizer, loss_fn, dataloader, writer, current_epoch_index, de
             # Update the tqdm bar description for every 10 batches, then update tqdm 
             # process bar and batch counter `n_iters`
             if n_iters % 10 == 0:
+                loss_scalar = loss.item()
                 pbar.set_description(
-                    f"Train| Epoch: {current_epoch_index}, loss: {loss:.3f}"
+                    f"Train| Epoch: {current_epoch_index}, loss: {loss_scalar:.3f}"
                 )
             pbar.update(1)
             n_iters += line_tensor.shape[0]
@@ -108,6 +114,8 @@ def eval(model, loss_fn, dataloader, threshold, device, bar_description: str, cu
             # The core of evaluation process, including model prediction and
             # store results and labels in `preds` and `gts`
             output = model(line_tensor)
+            # classify = nn.Sigmoid()
+            # output = classify(output)
             pred = (output > threshold).int().item()
             preds[idx] = pred
             gts[idx] = category_tensor.item()
@@ -243,7 +251,7 @@ def test(model, loss_fn, dataloader, threshold, writer, device):
     return test_result
 
 
-def main():
+def main(args=None):
     # Setting up experimental environment parameters
     set_seed(2024)
     device = torch.device("cuda")
@@ -264,7 +272,7 @@ def main():
     #     print(item)
     # Setting the threshold for binary classification prediction probabilities
     training_categories = torch.tensor([item[1] for item in training_dataset])
-    training_categories_0_proportion = 2*(training_categories == 0).sum() / len(
+    training_categories_0_proportion = args.thw*(training_categories == 0).sum() / len(
         training_categories
     )
     # training_categories_0_proportion = 0.9
@@ -279,18 +287,29 @@ def main():
     """
     # =============================================================================
     # Replace the code here
-    model = RNN(vocab_size=n_letters, embedding_size=256, hidden_size=256,)
+    if args.model == 'rnn':
+        model = RNN(vocab_size=n_letters, embedding_size=256, hidden_size=256,)   
+    elif args.model == 'transformer':
+        model = MYTransformer(vocab_size=n_letters, input_size=256, hidden_size=1024, num_layers=2, num_heads=1, dropout=0.1)
+    else:
+        raise ValueError("Invalid model name")
+    # model = MYTransformer(vocab_size=n_letters, input_size=256, hidden_size=1024, num_layers=2, num_heads=1, dropout=0.1)
+    # model = RNN(vocab_size=n_letters, embedding_size=256, hidden_size=256,)
     model.to(device)
     # =============================================================================
 
     # Setting up the parameters required for the training process, including 
     # optimizer, loss function, and logger
-    num_epoch = 30
+    assert args.drop <= args.epoch, "Drop learning rate should be less than training epoch"
+    num_epoch = args.epoch
     criterion = nn.BCELoss()
+    # criterion = sigmoid_focal_loss
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-5)
+    scheduler = StepLR(optimizer, step_size=args.drop, gamma=0.1)
+
     writer = SummaryWriter(
         # log_dir=f"2024_4_12"
-        log_dir=f"output/logs/{datetime.now().strftime('%b%d_%H-%M-%S')}"
+        log_dir=f"output/logs/{model.__class__.__name__}/{datetime.now().strftime('%b%d_%H-%M-%S')}"
     )
     
     # The actual training and testing section for the model, setting up for 
@@ -306,15 +325,19 @@ def main():
         #     current_epoch_index=current_epoch,
         #     device=device,
         # )
+        for param_group in optimizer.param_groups:
+            print(f"Learning rate: {param_group['lr']}")
         train(
             model=model,
             optimizer=optimizer,
             loss_fn=criterion,
+            n_regWeight=args.T,
             dataloader=train_dataloader,
             writer=writer,
             current_epoch_index=current_epoch,
             device=device,
         )
+        scheduler.step()
         validation(
             model=model,
             loss_fn=criterion,
@@ -335,4 +358,11 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument('--model', type=str, default='rnn', help='model name')
+    argparser.add_argument('--epoch', type=int, default=20, help='trainging epoch')
+    argparser.add_argument('--drop', type=int, default=19, help='drop learning rate')
+    argparser.add_argument('--T', type=float, default=1, help='weight for negative class loss')
+    argparser.add_argument('--thw', type=float, default=1.414, help='threshold weight')
+    args = argparser.parse_args()
+    main(args)
