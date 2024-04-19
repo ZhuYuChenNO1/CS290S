@@ -307,10 +307,16 @@ def main(args=None):
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-5)
     scheduler = StepLR(optimizer, step_size=args.drop, gamma=0.1)
 
-    writer = SummaryWriter(
-        # log_dir=f"2024_4_12"
-        log_dir=f"output/logs/{model.__class__.__name__}/{datetime.now().strftime('%b%d_%H-%M-%S')}"
-    )
+    if args.tbName is not None:
+        writer = SummaryWriter(
+            # log_dir=f"2024_4_12"
+            log_dir=f"output/logs/{model.__class__.__name__}/{args.tbName}"
+        )
+    else:
+        writer = SummaryWriter(
+            # log_dir=f"2024_4_12"
+            log_dir=f"output/logs/{model.__class__.__name__}/{datetime.now().strftime('%b%d_%H-%M-%S')}"
+        )
     
     # The actual training and testing section for the model, setting up for 
     # 'num_epoch' epochs, where each epoch includes training with train() and 
@@ -364,5 +370,6 @@ if __name__ == "__main__":
     argparser.add_argument('--drop', type=int, default=19, help='drop learning rate')
     argparser.add_argument('--T', type=float, default=1, help='weight for negative class loss')
     argparser.add_argument('--thw', type=float, default=1.414, help='threshold weight')
+    argparser.add_argument('--tbName', type=str, default=None, help='tensorboard name')
     args = argparser.parse_args()
     main(args)
