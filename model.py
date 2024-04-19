@@ -99,8 +99,8 @@ class RNN(nn.Module):
         self.hidden_size = hidden_size
 
         self.embedding = nn.Embedding(vocab_size, embedding_size)
-        self.i2h = MLP(embedding_size + hidden_size, hidden_size, hidden_size, act_layer=nn.ReLU, drop=0)
-        # self.i2h = nn.Linear(embedding_size + hidden_size, hidden_size)
+        # self.i2h = MLP(embedding_size + hidden_size, hidden_size, hidden_size, act_layer=nn.ReLU, drop=0)
+        self.i2h = nn.Linear(embedding_size + hidden_size, hidden_size)
         self.h2o = nn.Linear(hidden_size, 1)
         self.sigmoid = nn.Sigmoid()
 
@@ -118,44 +118,44 @@ class RNN(nn.Module):
         return torch.zeros(1, self.hidden_size)
 
 """
-TODO: Design or use others custom model for project_1 task.
-"""
-# =============================================================================
-# Replace with your designed model
-class YourModel(nn.Module):
-    def __init__(self, input_size, hidden_size, output_size):
-        """
-        Initialize the custom neural network
+# TODO: Design or use others custom model for project_1 task.
+# """
+# # =============================================================================
+# # Replace with your designed model
+# class YourModel(nn.Module):
+#     def __init__(self, input_size, hidden_size, output_size):
+#         """
+#         Initialize the custom neural network
         
-        Args:
-            input_size (int): Dimensionality of the input features
-            hidden_size (int): Size of the hidden layer
-            output_size (int): Number of output classes
-        """
-        super(YourModel, self).__init__()
-        # Fully connected layer from input to hidden
-        self.fc1 = nn.Linear(input_size, hidden_size)
-        # ReLU activation function
-        self.relu = nn.ReLU()
-        # Fully connected layer from hidden to output
-        self.fc2 = nn.Linear(hidden_size, output_size)
+#         Args:
+#             input_size (int): Dimensionality of the input features
+#             hidden_size (int): Size of the hidden layer
+#             output_size (int): Number of output classes
+#         """
+#         super(YourModel, self).__init__()
+#         # Fully connected layer from input to hidden
+#         self.fc1 = nn.Linear(input_size, hidden_size)
+#         # ReLU activation function
+#         self.relu = nn.ReLU()
+#         # Fully connected layer from hidden to output
+#         self.fc2 = nn.Linear(hidden_size, output_size)
         
-    def forward(self, input):
-        """
-        Define the forward propagation process
+#     def forward(self, input):
+#         """
+#         Define the forward propagation process
         
-        Args:
-            x (torch.Tensor): Input data tensor
+#         Args:
+#             x (torch.Tensor): Input data tensor
         
-        Returns:
-            torch.Tensor: Output of the neural network
-        """
-        # Linear transformation from input to hidden
-        x = self.fc1(x)
-        # ReLU activation function
-        x = self.relu(x)
-        # Linear transformation from hidden to output  
-        x = self.fc2(x)
+#         Returns:
+#             torch.Tensor: Output of the neural network
+#         """
+#         # Linear transformation from input to hidden
+#         x = self.fc1(x)
+#         # ReLU activation function
+#         x = self.relu(x)
+#         # Linear transformation from hidden to output  
+#         x = self.fc2(x)
         
-        return x
-# =============================================================================
+#         return x
+# # =============================================================================

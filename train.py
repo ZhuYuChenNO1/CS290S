@@ -162,12 +162,11 @@ def eval(model, loss_fn, dataloader, threshold, device, bar_description: str, cu
     # Your Code Here
     # category_tensor.to(device)
     # preds.to(device)
+    print(TP,TN, FP,FN)
     TP = torch.sum((preds == 1) & (gts == 1))
     TN = torch.sum((preds == 0) & (gts == 0))
     FP = torch.sum((preds == 1) & (gts == 0))
-    FN = torch.sum((preds == 0) & (gts == 1))
-    
-    print(TP,TN, FP,FN)
+    FN = torch.sum((preds == 0) & (gts == 1))   
     precision = TP/(TP+FP)
     recall = TP/(TP+FN)
     f1_score = 2*(precision*recall)/(precision+recall)
@@ -353,14 +352,14 @@ def main(args=None):
             current_epoch_index=current_epoch,
             device=device,
         )
-    test(
-        model=model,
-        loss_fn=criterion,
-        dataloader=test_dataloader,
-        threshold=training_categories_0_proportion,
-        writer=writer,
-        device=device,
-    )
+        test(
+            model=model,
+            loss_fn=criterion,
+            dataloader=test_dataloader,
+            threshold=training_categories_0_proportion,
+            writer=writer,
+            device=device,
+        )
 
 
 if __name__ == "__main__":
